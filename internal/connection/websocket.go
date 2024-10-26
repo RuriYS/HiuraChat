@@ -53,35 +53,34 @@ func (c *Client) RequestID() error {
 }
 
 func (c *Client) WriteJSON(v interface{}) error {
-    payload, err := json.Marshal(v)
-    if err != nil {
-        return fmt.Errorf("failed to marshal JSON: %w", err)
-    }
+	payload, err := json.Marshal(v)
+	if err != nil {
+		return fmt.Errorf("failed to marshal JSON: %w", err)
+	}
 
-    if c.conn == nil {
-        return fmt.Errorf("connection is nil")
-    }
+	if c.conn == nil {
+		return fmt.Errorf("connection is nil")
+	}
 
-    c.writeMu.Lock()
-    defer c.writeMu.Unlock()
+	c.writeMu.Lock()
+	defer c.writeMu.Unlock()
 
-    since := time.Since(c.lastWrite)
-    if since < time.Second {
-        time.Sleep(time.Second - since)
-    }
+	since := time.Since(c.lastWrite)
+	if since < time.Second {
+		time.Sleep(time.Second - since)
+	}
 
-    c.logger.Debug("sending payload: %s", string(payload))
+	c.logger.Debug("sending payload: %s", string(payload))
 
-    err = c.conn.WriteJSON(v)
-    if err != nil {
-        c.logger.Error("failed to write JSON: %v", err)
-        return fmt.Errorf("failed to write to websocket: %w", err)
-    }
+	err = c.conn.WriteJSON(v)
+	if err != nil {
+		c.logger.Error("failed to write JSON: %v", err)
+		return fmt.Errorf("failed to write to websocket: %w", err)
+	}
 
-    c.lastWrite = time.Now()
-    return nil
+	c.lastWrite = time.Now()
+	return nil
 }
-
 
 func (c *Client) ReadJSON(v interface{}) error {
 

@@ -10,12 +10,12 @@ import (
 )
 
 type Bot struct {
-    conn     *connection.Client
-    logger   *logger.Logger
-    handler  *handler.MessageHandler
-    commands map[string]types.Command
-    config   *config.Config
-    pingTime time.Time
+	conn     *connection.Client
+	logger   *logger.Logger
+	handler  *handler.MessageHandler
+	commands map[string]types.Command
+	config   *config.Config
+	pingTime time.Time
 }
 
 func New(logger *logger.Logger, cfg *config.Config) (*Bot, error) {
@@ -44,11 +44,11 @@ func New(logger *logger.Logger, cfg *config.Config) (*Bot, error) {
 }
 
 func (b *Bot) GetPingTime() time.Time {
-    return b.pingTime
+	return b.pingTime
 }
 
 func (b *Bot) SetPingTime(t time.Time) {
-    b.pingTime = t
+	b.pingTime = t
 }
 
 func (b *Bot) Start() error {
