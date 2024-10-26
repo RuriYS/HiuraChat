@@ -1,5 +1,7 @@
 package types
 
+import "time"
+
 type Message struct {
 	Action string       `json:"action"`
 	Data   *MessageData `json:"data,omitempty"`
@@ -21,4 +23,9 @@ type Command struct {
 	Name        string
 	Description string
 	Execute     func(args []string) (string, bool)
+}
+
+type PingBot interface {
+	GetPingTime() time.Time
+	SetPingTime(time.Time)
 }

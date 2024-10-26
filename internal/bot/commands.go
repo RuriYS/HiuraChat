@@ -13,15 +13,18 @@ func (b *Bot) initializeCommands() {
 			Name:        "ping",
 			Description: "Check bot latency",
 			Execute: func(args []string) (string, bool) {
-				start := time.Now()
-				return fmt.Sprintf("%s Pong! (Latency: %v)", b.handler.GetResponsePrefix(), time.Since(start)), true
+				b.pingTime = time.Now()
+				if err := b.conn.RequestID(); err != nil {
+					return fmt.Sprintf("%s Failed to ping", b.handler.GetResponsePrefix()), true
+				}
+				return "", false
 			},
 		},
 		"echo": {
 			Name:        "echo",
 			Description: "Echo back your message",
 			Execute: func(args []string) (string, bool) {
-				if len(args) > 1 {
+				if len(args) >= 1 {
 					return fmt.Sprintf("%s %s", b.handler.GetResponsePrefix(), strings.Join(args, " ")), true
 				}
 				return "", false

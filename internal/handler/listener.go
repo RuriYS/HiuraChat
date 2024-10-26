@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"fmt"
 	"hiurachat/internal/connection"
 	"hiurachat/internal/logger"
 	"hiurachat/internal/types"
 	"strings"
+	"time"
 )
 
 type MessageHandler struct {
@@ -13,14 +15,16 @@ type MessageHandler struct {
 	responsePrefix string
 	conn           *connection.Client
 	commands       map[string]types.Command
+	bot            types.PingBot
 }
 
-func New(logger *logger.Logger, prefix string, rprefix string) *MessageHandler {
+func New(logger *logger.Logger, prefix string, rprefix string, bot types.PingBot) *MessageHandler {
 	return &MessageHandler{
 		logger:         logger,
 		prefix:         prefix,
 		responsePrefix: rprefix,
 		commands:       make(map[string]types.Command),
+		bot:            bot,
 	}
 }
 
@@ -52,14 +56,28 @@ func (h *MessageHandler) Listen(conn *connection.Client) {
 	for {
 		var response types.Response
 		err := conn.ReadJSON(&response)
+
 		if err != nil {
 			h.logger.Error("Error reading: %v", err)
-			return
+			time.Sleep(time.Second)
+			continue
 		}
 
 		if response.ConnectionId != "" {
-			conn.SetBotID(response.ConnectionId)
-			h.logger.Info("Connected as: %s (%s)", response.Name, response.ConnectionId)
+			if conn.GetBotID() == "" {
+				conn.SetBotID(response.ConnectionId)
+				h.logger.Info("Connected as: %s (%s)", response.Name, conn.GetBotID())
+			}
+
+			pingTime := h.bot.GetPingTime()
+			if !pingTime.IsZero() {
+				latency := time.Since(pingTime)
+				h.bot.SetPingTime(time.Time{})
+				err := h.SendMessage(fmt.Sprintf("%s Pong! (Latency: %.2fms)", h.GetResponsePrefix(), float64(latency.Microseconds())/1000.0))
+				if err != nil {
+					h.logger.Error("Failed to send ping response: %s", err)
+				}
+			}
 			continue
 		}
 
@@ -74,6 +92,8 @@ func (h *MessageHandler) Listen(conn *connection.Client) {
 
 		command := parts[0]
 		args := parts[1:]
+
+		h.logger.Debug("command: %s, args: %s", command, args)
 
 		if strings.HasPrefix(command, h.prefix) {
 			if response, ok := h.HandleCommand(command, args); ok {

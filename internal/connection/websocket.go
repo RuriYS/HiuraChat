@@ -1,25 +1,30 @@
 package connection
 
 import (
+	"encoding/json"
+	"fmt"
 	"hiurachat/internal/logger"
 	"hiurachat/internal/types"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
 
 type Client struct {
-	conn   *websocket.Conn
-	botID  string
-	mu     sync.Mutex
-	logger *logger.Logger
-	wsUrl  string
+	conn      *websocket.Conn
+	botID     string
+	logger    *logger.Logger
+	wsUrl     string
+	writeMu   sync.Mutex
+	lastWrite time.Time
 }
 
 func New(logger *logger.Logger, wsUrl string) (*Client, error) {
 	return &Client{
-		logger: logger,
-		wsUrl:  wsUrl,
+		logger:    logger,
+		wsUrl:     wsUrl,
+		lastWrite: time.Now().Add(-1 * time.Second),
 	}, nil
 }
 
@@ -48,14 +53,41 @@ func (c *Client) RequestID() error {
 }
 
 func (c *Client) WriteJSON(v interface{}) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return c.conn.WriteJSON(v)
+    payload, err := json.Marshal(v)
+    if err != nil {
+        return fmt.Errorf("failed to marshal JSON: %w", err)
+    }
+
+    if c.conn == nil {
+        return fmt.Errorf("connection is nil")
+    }
+
+    c.writeMu.Lock()
+    defer c.writeMu.Unlock()
+
+    since := time.Since(c.lastWrite)
+    if since < time.Second {
+        time.Sleep(time.Second - since)
+    }
+
+    c.logger.Debug("sending payload: %s", string(payload))
+
+    err = c.conn.WriteJSON(v)
+    if err != nil {
+        c.logger.Error("failed to write JSON: %v", err)
+        return fmt.Errorf("failed to write to websocket: %w", err)
+    }
+
+    c.lastWrite = time.Now()
+    return nil
 }
 
+
 func (c *Client) ReadJSON(v interface{}) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+
+	if c.conn == nil {
+		return fmt.Errorf("connection is nil")
+	}
 	return c.conn.ReadJSON(v)
 }
 
