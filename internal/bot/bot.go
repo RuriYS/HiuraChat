@@ -15,6 +15,8 @@ type Bot struct {
 }
 
 func New(logger *logger.Logger) (*Bot, error) {
+    logger.Info("Initializing...")
+    
     conn, err := connection.New(logger)
     if err != nil {
         return nil, err
@@ -29,6 +31,7 @@ func New(logger *logger.Logger) (*Bot, error) {
         commands: make(map[string]types.Command),
     }
     
+    logger.Info("Loading commands")
     bot.initializeCommands()
     return bot, nil
 }
@@ -38,6 +41,7 @@ func (b *Bot) Start() error {
         return err
     }
 
+    b.logger.Info("Loading events")
     b.conn.StartHeartbeat()
     go b.handler.Listen(b.conn)
     

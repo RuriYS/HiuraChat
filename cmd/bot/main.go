@@ -15,7 +15,6 @@ func main() {
     defer l.Close()
 
     l.SetLogLevel(logger.DEBUG)
-    l.Info("Starting...")
 
     bot, err := bot.New(l)
     if err != nil {
