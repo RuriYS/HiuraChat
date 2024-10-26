@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-const HeartbeatInterval = time.Minute
+const HeartbeatInterval = 30 * time.Second
 
 func startHeartbeat() {
 	ticker := time.NewTicker(HeartbeatInterval)
