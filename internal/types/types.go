@@ -1,8 +1,8 @@
-package main
+package types
 
 type Message struct {
-	Action string      `json:"action"`
-	Data   *MessageData `json:"data,omitempty"`
+    Action string      `json:"action"`
+    Data   *MessageData `json:"data,omitempty"`
 }
 
 type MessageData struct {

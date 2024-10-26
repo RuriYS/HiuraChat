@@ -1,4 +1,4 @@
-package main
+package logger
 
 import (
 	"fmt"
@@ -10,7 +10,6 @@ import (
 )
 
 const (
-	// ANSI color codes
 	colorReset  = "\033[0m"
 	colorRed    = "\033[31m"
 	colorGreen  = "\033[32m"
@@ -37,14 +36,14 @@ type Logger struct {
 var instance *Logger
 var once sync.Once
 
-func getLogger() *Logger {
-	once.Do(func() {
-		instance = newLogger()
-	})
-	return instance
+func GetLogger() *Logger {
+    once.Do(func() {
+        instance = NewLogger()
+    })
+    return instance
 }
 
-func newLogger() *Logger {
+func NewLogger() *Logger {
 	err := os.MkdirAll("logs", 0755)
 	if err != nil {
 		fmt.Printf("Error creating logs directory: %v\n", err)
