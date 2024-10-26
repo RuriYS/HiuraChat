@@ -8,42 +8,42 @@ import (
 )
 
 type Bot struct {
-    conn     *connection.Client
-    logger   *logger.Logger
-    handler  *handler.MessageHandler
-    commands map[string]types.Command
+	conn     *connection.Client
+	logger   *logger.Logger
+	handler  *handler.MessageHandler
+	commands map[string]types.Command
 }
 
 func New(logger *logger.Logger) (*Bot, error) {
-    logger.Info("Initializing...")
-    
-    conn, err := connection.New(logger)
-    if err != nil {
-        return nil, err
-    }
+	logger.Info("Initializing...")
 
-    handler := handler.New(logger)
-    
-    bot := &Bot{
-        conn:     conn,
-        logger:   logger,
-        handler:  handler,
-        commands: make(map[string]types.Command),
-    }
-    
-    logger.Info("Loading commands")
-    bot.initializeCommands()
-    return bot, nil
+	conn, err := connection.New(logger)
+	if err != nil {
+		return nil, err
+	}
+
+	handler := handler.New(logger)
+
+	bot := &Bot{
+		conn:     conn,
+		logger:   logger,
+		handler:  handler,
+		commands: make(map[string]types.Command),
+	}
+
+	logger.Info("Loading commands")
+	bot.initializeCommands()
+	return bot, nil
 }
 
 func (b *Bot) Start() error {
-    if err := b.conn.Connect(); err != nil {
-        return err
-    }
+	if err := b.conn.Connect(); err != nil {
+		return err
+	}
 
-    b.logger.Info("Loading events")
-    b.conn.StartHeartbeat()
-    go b.handler.Listen(b.conn)
-    
-    return nil
+	b.logger.Info("Loading events")
+	b.conn.StartHeartbeat()
+	go b.handler.Listen(b.conn)
+
+	return nil
 }

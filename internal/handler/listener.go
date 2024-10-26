@@ -8,89 +8,91 @@ import (
 )
 
 type MessageHandler struct {
-    logger         *logger.Logger
-    prefix         string
-    responsePrefix string
-    conn          *connection.Client
-    commands      map[string]types.Command
+	logger         *logger.Logger
+	prefix         string
+	responsePrefix string
+	conn           *connection.Client
+	commands       map[string]types.Command
 }
 
 func New(logger *logger.Logger) *MessageHandler {
-    return &MessageHandler{
-        logger:         logger,
-        prefix:         "$",
-        responsePrefix: "[BOT: Hermit]",
-        commands:       make(map[string]types.Command),
-    }
+	return &MessageHandler{
+		logger:         logger,
+		prefix:         "$",
+		responsePrefix: "[BOT: Hermit]",
+		commands:       make(map[string]types.Command),
+	}
 }
 
 func (h *MessageHandler) SetCommands(commands map[string]types.Command) {
-    h.commands = commands
+	h.commands = commands
 }
 
 func (h *MessageHandler) GetPrefix() string {
-    return h.prefix
+	return h.prefix
 }
 
 func (h *MessageHandler) GetResponsePrefix() string {
-    return h.responsePrefix
+	return h.responsePrefix
 }
 
 func (h *MessageHandler) HandleCommand(commandStr string, args []string) (string, bool) {
-    commandName := strings.TrimPrefix(commandStr, h.prefix)
-    
-    command, exists := h.commands[commandName]
-    if !exists {
-        return "", false
-    }
-    
-    return command.Execute(args)
+	commandName := strings.TrimPrefix(commandStr, h.prefix)
+
+	command, exists := h.commands[commandName]
+	if !exists {
+		return "", false
+	}
+
+	return command.Execute(args)
 }
 
 func (h *MessageHandler) Listen(conn *connection.Client) {
-    h.conn = conn
-    for {
-        var response types.Response
-        err := conn.ReadJSON(&response)
-        if err != nil {
-            h.logger.Error("Error reading: %v", err)
-            return
-        }
+	h.conn = conn
+	for {
+		var response types.Response
+		err := conn.ReadJSON(&response)
+		if err != nil {
+			h.logger.Error("Error reading: %v", err)
+			return
+		}
 
-        if response.ConnectionId != "" {
-            conn.SetBotID(response.ConnectionId)
-            h.logger.Info("Connected as: %s (%s)", response.Name, response.ConnectionId)
-            continue
-        }
+		if response.ConnectionId != "" {
+			conn.SetBotID(response.ConnectionId)
+			h.logger.Info("Connected as: %s (%s)", response.Name, response.ConnectionId)
+			continue
+		}
 
-        if response.Message == "" || response.Sender == conn.GetBotID() {
-            continue
-        }
+		if response.Message == "" || response.Sender == conn.GetBotID() {
+			continue
+		}
 
-        parts := strings.Fields(response.Message)
-        if len(parts) == 0 {
-            continue
-        }
+		parts := strings.Fields(response.Message)
+		if len(parts) == 0 {
+			continue
+		}
 
-        command := parts[0]
-        args := parts[1:]
+		command := parts[0]
+		args := parts[1:]
 
-        if strings.HasPrefix(command, h.prefix) {
-            if response, ok := h.HandleCommand(command, args); ok {
-                h.SendMessage(response)
-            }
-        }
+		if strings.HasPrefix(command, h.prefix) {
+			if response, ok := h.HandleCommand(command, args); ok {
+				if err := h.SendMessage(response); err != nil {
+					h.logger.Error("Failed to send message: %v", err)
+				}
+			}
+		}
 
-        h.logger.Info("%s: %s", response.SenderName, response.Message)
-    }
+		h.logger.Info("%s: %s", response.SenderName, response.Message)
+	}
 }
 
 func (h *MessageHandler) SendMessage(message string) error {
-    msg := types.Message{
-        Action: "sendMessage",
-        Data: &types.MessageData{
-            Message: message,
-        },
-    }
-    return h.conn.WriteJSON(msg)
+	msg := types.Message{
+		Action: "sendMessage",
+		Data: &types.MessageData{
+			Message: message,
+		},
+	}
+	return h.conn.WriteJSON(msg)
 }

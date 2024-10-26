@@ -1,8 +1,8 @@
 package types
 
 type Message struct {
-    Action string      `json:"action"`
-    Data   *MessageData `json:"data,omitempty"`
+	Action string       `json:"action"`
+	Data   *MessageData `json:"data,omitempty"`
 }
 
 type MessageData struct {
@@ -11,10 +11,10 @@ type MessageData struct {
 
 type Response struct {
 	ConnectionId string `json:"connectionId,omitempty"`
-	Name        string `json:"name,omitempty"`
-	Message     string `json:"message,omitempty"`
-	Sender      string `json:"sender,omitempty"`
-	SenderName  string `json:"senderName,omitempty"`
+	Name         string `json:"name,omitempty"`
+	Message      string `json:"message,omitempty"`
+	Sender       string `json:"sender,omitempty"`
+	SenderName   string `json:"senderName,omitempty"`
 }
 
 type Command struct {
@@ -22,4 +22,3 @@ type Command struct {
 	Description string
 	Execute     func(args []string) (string, bool)
 }
-

@@ -37,10 +37,10 @@ var instance *Logger
 var once sync.Once
 
 func GetLogger() *Logger {
-    once.Do(func() {
-        instance = NewLogger()
-    })
-    return instance
+	once.Do(func() {
+		instance = NewLogger()
+	})
+	return instance
 }
 
 func NewLogger() *Logger {
@@ -52,7 +52,7 @@ func NewLogger() *Logger {
 
 	timestamp := time.Now().Format("2006-01-02_15-04")
 	logPath := filepath.Join("logs", fmt.Sprintf("%s.log", timestamp))
-	
+
 	file, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		fmt.Printf("Error opening log file: %v\n", err)
@@ -76,10 +76,10 @@ func (l *Logger) log(level LogLevel, format string, args ...interface{}) {
 
 	timestamp := time.Now().Format("15:04:05.000")
 	logMessage := strings.ReplaceAll(fmt.Sprintf(format, args...), "\n", "\\n")
-	
+
 	var colorCode string
 	var levelStr string
-	
+
 	switch level {
 	case DEBUG:
 		colorCode = colorBlue
@@ -95,8 +95,8 @@ func (l *Logger) log(level LogLevel, format string, args ...interface{}) {
 		levelStr = "ERROR"
 	}
 
-	consoleLog := fmt.Sprintf("[%s] %s%s: %s%s\n", 
-		timestamp, 
+	consoleLog := fmt.Sprintf("[%s] %s%s: %s%s\n",
+		timestamp,
 		colorCode,
 		levelStr,
 		logMessage,
