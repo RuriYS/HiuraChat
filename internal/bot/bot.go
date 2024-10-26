@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"hiurachat/internal/config"
 	"hiurachat/internal/connection"
 	"hiurachat/internal/handler"
 	"hiurachat/internal/logger"
@@ -12,23 +13,25 @@ type Bot struct {
 	logger   *logger.Logger
 	handler  *handler.MessageHandler
 	commands map[string]types.Command
+	config   *config.Config
 }
 
-func New(logger *logger.Logger) (*Bot, error) {
+func New(logger *logger.Logger, cfg *config.Config) (*Bot, error) {
 	logger.Info("Initializing...")
 
-	conn, err := connection.New(logger)
+	conn, err := connection.New(logger, cfg.WebSocket.URL)
 	if err != nil {
 		return nil, err
 	}
 
-	handler := handler.New(logger)
+	handler := handler.New(logger, cfg.Bot.Prefix, cfg.Bot.ResponsePrefix)
 
 	bot := &Bot{
 		conn:     conn,
 		logger:   logger,
 		handler:  handler,
 		commands: make(map[string]types.Command),
+		config:   cfg,
 	}
 
 	logger.Info("Loading commands")
@@ -44,6 +47,7 @@ func (b *Bot) Start() error {
 	b.logger.Info("Loading events")
 	b.conn.StartHeartbeat()
 	go b.handler.Listen(b.conn)
+	b.conn.RequestID()
 
 	return nil
 }

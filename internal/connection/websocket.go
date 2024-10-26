@@ -13,16 +13,18 @@ type Client struct {
 	botID  string
 	mu     sync.Mutex
 	logger *logger.Logger
+	wsUrl  string
 }
 
-func New(logger *logger.Logger) (*Client, error) {
+func New(logger *logger.Logger, wsUrl string) (*Client, error) {
 	return &Client{
 		logger: logger,
+		wsUrl:  wsUrl,
 	}, nil
 }
 
 func (c *Client) Connect() error {
-	url := "wss://gddr51pi43.execute-api.ap-southeast-1.amazonaws.com/dev"
+	url := c.wsUrl
 	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
 		return err

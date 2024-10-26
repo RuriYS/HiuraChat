@@ -15,11 +15,11 @@ type MessageHandler struct {
 	commands       map[string]types.Command
 }
 
-func New(logger *logger.Logger) *MessageHandler {
+func New(logger *logger.Logger, prefix string, rprefix string) *MessageHandler {
 	return &MessageHandler{
 		logger:         logger,
-		prefix:         "$",
-		responsePrefix: "[BOT: Hermit]",
+		prefix:         prefix,
+		responsePrefix: rprefix,
 		commands:       make(map[string]types.Command),
 	}
 }

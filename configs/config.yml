@@ -1,0 +1,11 @@
+# configs/config.yml
+bot:
+  prefix: "$"
+  response_prefix: "[BOT: Hermit]"
+
+websocket:
+  url: "wss://gddr51pi43.execute-api.ap-southeast-1.amazonaws.com/dev"
+
+logger:
+  level: "debug"
+  use_colors: true
