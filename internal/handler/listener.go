@@ -63,9 +63,9 @@ func (h *MessageHandler) Listen(conn *connection.Client) {
 				h.logger.Info("Connected as: %s (%s)", response.Name, conn.GetBotID())
 			}
 
-			pingTime := h.bot.GetLatency()
-			if !pingTime.IsZero() {
-				latency := time.Since(pingTime)
+			lat := h.bot.GetLatency()
+			if !lat.IsZero() {
+				latency := time.Since(lat)
 				h.bot.SetLatency(time.Time{})
 				err := h.SendMessage(h.GetResponsePrefix() +
 					fmt.Sprintf(" Pong! (Latency: %.2fms)", float64(latency.Microseconds())/1000.0))
