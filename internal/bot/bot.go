@@ -43,11 +43,11 @@ func New(logger *logger.Logger, cfg *config.Config) (*Bot, error) {
 	return bot, nil
 }
 
-func (b *Bot) GetPingTime() time.Time {
+func (b *Bot) GetLatency() time.Time {
 	return b.pingTime
 }
 
-func (b *Bot) SetPingTime(t time.Time) {
+func (b *Bot) SetLatency(t time.Time) {
 	b.pingTime = t
 }
 

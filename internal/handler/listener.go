@@ -15,10 +15,10 @@ type MessageHandler struct {
 	responsePrefix string
 	conn           *connection.Client
 	commands       map[string]types.Command
-	bot            types.PingBot
+	bot            types.Latency
 }
 
-func New(logger *logger.Logger, prefix string, rprefix string, bot types.PingBot) *MessageHandler {
+func New(logger *logger.Logger, prefix string, rprefix string, bot types.Latency) *MessageHandler {
 	return &MessageHandler{
 		logger:         logger,
 		prefix:         prefix,
@@ -69,10 +69,10 @@ func (h *MessageHandler) Listen(conn *connection.Client) {
 				h.logger.Info("Connected as: %s (%s)", response.Name, conn.GetBotID())
 			}
 
-			pingTime := h.bot.GetPingTime()
+			pingTime := h.bot.GetLatency()
 			if !pingTime.IsZero() {
 				latency := time.Since(pingTime)
-				h.bot.SetPingTime(time.Time{})
+				h.bot.SetLatency(time.Time{})
 				err := h.SendMessage(fmt.Sprintf("%s Pong! (Latency: %.2fms)", h.GetResponsePrefix(), float64(latency.Microseconds())/1000.0))
 				if err != nil {
 					h.logger.Error("Failed to send ping response: %s", err)

@@ -25,7 +25,7 @@ type Command struct {
 	Execute     func(args []string) (string, bool)
 }
 
-type PingBot interface {
-	GetPingTime() time.Time
-	SetPingTime(time.Time)
+type Latency interface {
+	GetLatency() time.Time
+	SetLatency(time.Time)
 }
