@@ -70,7 +70,7 @@ func (c *Client) WriteJSON(v interface{}) error {
 		time.Sleep(time.Second - since)
 	}
 
-	c.logger.Debug("sending payload: %s", string(payload))
+	c.logger.Debug("Payload: %s", string(payload))
 
 	err = c.conn.WriteJSON(v)
 	if err != nil {

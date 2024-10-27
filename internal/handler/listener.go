@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
 	"hiurachat/internal/connection"
 	"hiurachat/internal/logger"
@@ -63,6 +64,14 @@ func (h *MessageHandler) Listen(conn *connection.Client) {
 			continue
 		}
 
+		data, err := json.Marshal(response)
+		{
+			if err != nil {
+				h.logger.Debug(err.Error())
+			}
+			h.logger.Debug("Event: " + string(data))
+		}
+
 		if response.ConnectionId != "" {
 			if conn.GetBotID() == "" {
 				conn.SetBotID(response.ConnectionId)
@@ -92,8 +101,6 @@ func (h *MessageHandler) Listen(conn *connection.Client) {
 
 		command := parts[0]
 		args := parts[1:]
-
-		h.logger.Debug("command: %s, args: %s", command, args)
 
 		if strings.HasPrefix(command, h.prefix) {
 			if response, ok := h.HandleCommand(command, args); ok {
