@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"fmt"
 	"hiurachat/internal/connection"
 	"hiurachat/internal/logger"
@@ -54,24 +53,10 @@ func (h *MessageHandler) HandleCommand(commandStr string, args []string) (string
 
 func (h *MessageHandler) Listen(conn *connection.Client) {
 	h.conn = conn
-	for {
-		var response types.Response
-		err := conn.ReadJSON(&response)
 
-		if err != nil {
-			h.logger.Error("Error reading: %v", err)
-			time.Sleep(time.Second)
-			continue
-		}
-
-		data, err := json.Marshal(response)
-		{
-			if err != nil {
-				h.logger.Debug(err.Error())
-			}
-			h.logger.Debug("Event: " + string(data))
-		}
-
+	// Define the message handler function
+	messageHandler := func(response types.Response) {
+		// Handle connection ID messages
 		if response.ConnectionId != "" {
 			if conn.GetBotID() == "" {
 				conn.SetBotID(response.ConnectionId)
@@ -82,36 +67,41 @@ func (h *MessageHandler) Listen(conn *connection.Client) {
 			if !pingTime.IsZero() {
 				latency := time.Since(pingTime)
 				h.bot.SetLatency(time.Time{})
-				err := h.SendMessage(fmt.Sprintf("%s Pong! (Latency: %.2fms)", h.GetResponsePrefix(), float64(latency.Microseconds())/1000.0))
+				err := h.SendMessage(h.GetResponsePrefix() +
+					fmt.Sprintf(" Pong! (Latency: %.2fms)", float64(latency.Microseconds())/1000.0))
 				if err != nil {
 					h.logger.Error("Failed to send ping response: %s", err)
 				}
 			}
-			continue
+			return
 		}
 
+		// Skip empty messages or messages from self
 		if response.Message == "" || response.Sender == conn.GetBotID() {
-			continue
+			return
 		}
 
+		// Process commands
 		parts := strings.Fields(response.Message)
-		if len(parts) == 0 {
-			continue
-		}
+		if len(parts) > 0 {
+			command := parts[0]
+			args := parts[1:]
 
-		command := parts[0]
-		args := parts[1:]
-
-		if strings.HasPrefix(command, h.prefix) {
-			if response, ok := h.HandleCommand(command, args); ok {
-				if err := h.SendMessage(response); err != nil {
-					h.logger.Error("Failed to send message: %v", err)
+			if strings.HasPrefix(command, h.prefix) {
+				if response, ok := h.HandleCommand(command, args); ok {
+					if err := h.SendMessage(response); err != nil {
+						h.logger.Error("Failed to send message: %v", err)
+					}
 				}
 			}
 		}
 
+		// Log all messages
 		h.logger.Info("%s: %s", response.SenderName, response.Message)
 	}
+
+	// Start listening for messages
+	conn.Listen(messageHandler)
 }
 
 func (h *MessageHandler) SendMessage(message string) error {

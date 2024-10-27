@@ -26,6 +26,7 @@ type Client struct {
 	writeTimeout         time.Duration   // Configurable write timeout
 	pingInterval         time.Duration   // Configurable ping interval
 	pingTimeout          time.Duration   // Timeout for ping responses
+	messageChannel       chan types.Response
 }
 
 // New creates a new WebSocket client instance with the specified logger and WebSocket URL.
@@ -37,10 +38,11 @@ func New(logger *logger.Logger, wsUrl string) (*Client, error) {
 		lastWrite:            time.Now().Add(-1 * time.Second),
 		done:                 make(chan struct{}),
 		maxReconnectAttempts: 10,
-		readTimeout:          2 * time.Minute, // Increased read timeout
+		readTimeout:          2 * time.Minute,
 		writeTimeout:         10 * time.Second,
-		pingInterval:         30 * time.Second, // More frequent pings
+		pingInterval:         30 * time.Second,
 		pingTimeout:          5 * time.Second,
+		messageChannel:       make(chan types.Response, 100),
 	}, nil
 }
 
@@ -73,13 +75,10 @@ func (c *Client) Connect() error {
 	return nil
 }
 
-// monitorConnection continuously monitors the WebSocket connection for incoming messages
-// and connection status. It handles ping messages and detects disconnections.
+// monitorConnection continuously monitors the WebSocket connection for incoming messages and status
 func (c *Client) monitorConnection() {
-	// Set up ping handler with dynamic timeout adjustment
 	c.conn.SetPingHandler(func(appData string) error {
 		c.logger.Debug("Received ping")
-		// Reset read deadline when ping is received
 		c.conn.SetReadDeadline(time.Now().Add(c.readTimeout))
 		return c.conn.WriteControl(
 			websocket.PongMessage,
@@ -88,7 +87,6 @@ func (c *Client) monitorConnection() {
 		)
 	})
 
-	// Set up pong handler to reset read deadline
 	c.conn.SetPongHandler(func(appData string) error {
 		c.logger.Debug("Received pong")
 		c.conn.SetReadDeadline(time.Now().Add(c.readTimeout))
@@ -100,10 +98,11 @@ func (c *Client) monitorConnection() {
 		case <-c.done:
 			return
 		default:
-			// Reset read deadline
 			c.conn.SetReadDeadline(time.Now().Add(c.readTimeout))
 
-			messageType, message, err := c.conn.ReadMessage()
+			var response types.Response
+			err := c.conn.ReadJSON(&response)
+
 			if err != nil {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 					c.logger.Error("Unexpected close error: %v", err)
@@ -114,15 +113,28 @@ func (c *Client) monitorConnection() {
 				return
 			}
 
-			// Reset read deadline after successful read
-			c.conn.SetReadDeadline(time.Now().Add(c.readTimeout))
-
-			switch messageType {
-			case websocket.TextMessage:
-				c.logger.Debug("Received text message: %s", string(message))
-			case websocket.BinaryMessage:
-				c.logger.Debug("Received binary message of length: %d", len(message))
+			// Log all received messages for debugging
+			if data, err := json.Marshal(response); err == nil {
+				c.logger.Debug("Received message: %s", string(data))
 			}
+
+			// Send the message to the channel for processing
+			select {
+			case c.messageChannel <- response:
+			default:
+				c.logger.Warn("Message channel full, dropping message")
+			}
+		}
+	}
+}
+
+func (c *Client) Listen(handler func(types.Response)) {
+	for {
+		select {
+		case <-c.done:
+			return
+		case msg := <-c.messageChannel:
+			handler(msg)
 		}
 	}
 }
