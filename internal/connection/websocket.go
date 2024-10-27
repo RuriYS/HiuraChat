@@ -22,6 +22,10 @@ type Client struct {
 	done                 chan struct{}   // Channel for signaling shutdown
 	reconnecting         bool            // Flag indicating if reconnection is in progress
 	maxReconnectAttempts int             // Maximum number of reconnection attempts
+	readTimeout          time.Duration   // Configurable read timeout
+	writeTimeout         time.Duration   // Configurable write timeout
+	pingInterval         time.Duration   // Configurable ping interval
+	pingTimeout          time.Duration   // Timeout for ping responses
 }
 
 // New creates a new WebSocket client instance with the specified logger and WebSocket URL.
@@ -33,6 +37,10 @@ func New(logger *logger.Logger, wsUrl string) (*Client, error) {
 		lastWrite:            time.Now().Add(-1 * time.Second),
 		done:                 make(chan struct{}),
 		maxReconnectAttempts: 10,
+		readTimeout:          2 * time.Minute, // Increased read timeout
+		writeTimeout:         10 * time.Second,
+		pingInterval:         30 * time.Second, // More frequent pings
+		pingTimeout:          5 * time.Second,
 	}, nil
 }
 
@@ -45,6 +53,7 @@ func (c *Client) Connect() error {
 	// Configure connection timeout
 	dialer := websocket.DefaultDialer
 	dialer.HandshakeTimeout = 10 * time.Second
+	dialer.EnableCompression = true
 
 	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
@@ -67,10 +76,23 @@ func (c *Client) Connect() error {
 // monitorConnection continuously monitors the WebSocket connection for incoming messages
 // and connection status. It handles ping messages and detects disconnections.
 func (c *Client) monitorConnection() {
-	// Set up ping handler for keeping connection alive
+	// Set up ping handler with dynamic timeout adjustment
 	c.conn.SetPingHandler(func(appData string) error {
 		c.logger.Debug("Received ping")
-		return c.conn.WriteControl(websocket.PongMessage, []byte{}, time.Now().Add(5*time.Second))
+		// Reset read deadline when ping is received
+		c.conn.SetReadDeadline(time.Now().Add(c.readTimeout))
+		return c.conn.WriteControl(
+			websocket.PongMessage,
+			[]byte{},
+			time.Now().Add(c.pingTimeout),
+		)
+	})
+
+	// Set up pong handler to reset read deadline
+	c.conn.SetPongHandler(func(appData string) error {
+		c.logger.Debug("Received pong")
+		c.conn.SetReadDeadline(time.Now().Add(c.readTimeout))
+		return nil
 	})
 
 	for {
@@ -78,8 +100,8 @@ func (c *Client) monitorConnection() {
 		case <-c.done:
 			return
 		default:
-			// Reset read deadline to prevent timeout
-			c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+			// Reset read deadline
+			c.conn.SetReadDeadline(time.Now().Add(c.readTimeout))
 
 			messageType, message, err := c.conn.ReadMessage()
 			if err != nil {
@@ -92,7 +114,9 @@ func (c *Client) monitorConnection() {
 				return
 			}
 
-			// Log different message types for debugging
+			// Reset read deadline after successful read
+			c.conn.SetReadDeadline(time.Now().Add(c.readTimeout))
+
 			switch messageType {
 			case websocket.TextMessage:
 				c.logger.Debug("Received text message: %s", string(message))
@@ -160,6 +184,10 @@ func (c *Client) reconnectWithBackoff() {
 // StartHeartbeat initiates a heartbeat goroutine that sends periodic ping messages
 // to keep the connection alive. The interval parameter determines the frequency of heartbeats.
 func (c *Client) StartHeartbeat(interval time.Duration) {
+	if interval < c.pingInterval {
+		interval = c.pingInterval
+	}
+
 	ticker := time.NewTicker(interval)
 	go func() {
 		for {
@@ -170,11 +198,14 @@ func (c *Client) StartHeartbeat(interval time.Duration) {
 				}
 
 				c.logger.Debug("Sending heartbeat")
-				if err := c.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(5*time.Second)); err != nil {
+				deadline := time.Now().Add(c.writeTimeout)
+				if err := c.WriteControl(websocket.PingMessage, []byte{}, deadline); err != nil {
 					c.logger.Error("Heartbeat failed: %v", err)
 					c.handleDisconnect()
 				} else {
 					c.logger.Debug("Heartbeat sent")
+					// Reset read deadline after successful heartbeat
+					c.conn.SetReadDeadline(time.Now().Add(c.readTimeout))
 				}
 
 			case <-c.done:
