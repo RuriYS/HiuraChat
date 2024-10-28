@@ -1,7 +1,6 @@
-# configs/config.yml
 bot:
-  prefix: "$"
-  response_prefix: "[BOT: Hermit]"
+  prefix: "."
+  response_prefix: "[BOT]"
 
 websocket:
   # url: "wss://gddr51pi43.execute-api.ap-southeast-1.amazonaws.com/dev"

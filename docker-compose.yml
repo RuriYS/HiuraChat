@@ -6,5 +6,5 @@ services:
       dockerfile: Dockerfile
     image: ruriys/hiurachat:latest
     volumes:
-      - ./configs:/root/configs
+      - ./config.yml:/root/config.yml
       - ./logs:/root/logs
