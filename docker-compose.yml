@@ -1,0 +1,10 @@
+services:
+  hiurachat:
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ruriys/hiurachat:latest
+    volumes:
+      - ./configs:/root/configs
+      - ./logs:/root/logs
