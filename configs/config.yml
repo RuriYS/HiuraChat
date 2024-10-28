@@ -3,9 +3,8 @@ bot:
   response_prefix: "[BOT]"
 
 websocket:
-  # url: "wss://gddr51pi43.execute-api.ap-southeast-1.amazonaws.com/dev"
   url: "wss://websocket.hiura.site/"
 
 logger:
-  level: "debug"
-  use_colors: true
+  level: "info"
+  use_colors: false
