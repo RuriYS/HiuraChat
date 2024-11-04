@@ -1,4 +1,6 @@
+.artifacts
 logs
 chat.js
 hiurachat
 config.yml
+artifacts/
