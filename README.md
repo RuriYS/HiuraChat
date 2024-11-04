@@ -16,10 +16,10 @@ HiuraChat is a WebSocket-based chat bot that's built to be reliable and nice to 
 
 ### Using Pre-built Binary
 
-1. Head over to the [Actions](https://github.com/RuriYS/HiuraChat/actions) page
-2. Download the latest artifact for your platform
-3. Extract it
-4. Make it executable (if you're on Linux):
+1. Head over to the [Actions](https://github.com/RuriYS/HiuraChat/actions) or [Releases](https://github.com/RuriYS/HiuraChat/releases) page
+2. Download the latest artifact or binary for your platform
+3. If you downloaded the artifact, extract it
+4. Make it executable (Linux):
 
 ```bash
 chmod +x hiurachat
