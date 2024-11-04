@@ -14,7 +14,7 @@ func (b *Bot) initializeCommands() {
 			Description: "Check bot latency",
 			Execute: func(args []string) (string, bool) {
 				b.pingTime = time.Now()
-				if err := b.conn.RequestID(); err != nil {
+				if err := b.client.RequestID(); err != nil {
 					return fmt.Sprintf("%s Failed to ping", b.handler.GetResponsePrefix()), true
 				}
 				return "", false

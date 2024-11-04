@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -21,7 +22,27 @@ type BotConfig struct {
 }
 
 type WebSocketConfig struct {
-	URL string `yaml:"url"`
+	URL                  string `yaml:"url"`
+	WSUrl                string
+	MaxReconnectAttempts int
+	ReadTimeout          time.Duration
+	WriteTimeout         time.Duration
+	PingInterval         time.Duration
+	PingTimeout          time.Duration
+	HandshakeTimeout     time.Duration
+	MessageBufferSize    int
+}
+
+func DefaultConfig() WebSocketConfig {
+	return WebSocketConfig{
+		MaxReconnectAttempts: 10,
+		ReadTimeout:          2 * time.Minute,
+		WriteTimeout:         10 * time.Second,
+		PingInterval:         30 * time.Second,
+		PingTimeout:          5 * time.Second,
+		HandshakeTimeout:     10 * time.Second,
+		MessageBufferSize:    100,
+	}
 }
 
 type LoggerConfig struct {

@@ -10,7 +10,7 @@ import (
 )
 
 type Bot struct {
-	conn     *connection.Client
+	client   *connection.Client
 	logger   *logger.Logger
 	handler  *handler.MessageHandler
 	commands map[string]types.Command
@@ -21,13 +21,13 @@ type Bot struct {
 func New(logger *logger.Logger, cfg *config.Config) (*Bot, error) {
 	logger.Info("Initializing...")
 
-	conn, err := connection.New(logger, cfg.WebSocket.URL)
+	client, err := connection.New(logger, cfg.WebSocket.URL, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	bot := &Bot{
-		conn:     conn,
+		client:   client,
 		logger:   logger,
 		commands: make(map[string]types.Command),
 		config:   cfg,
@@ -52,14 +52,14 @@ func (b *Bot) SetLatency(t time.Time) {
 }
 
 func (b *Bot) Start() error {
-	if err := b.conn.Connect(); err != nil {
+	if err := b.client.Connect(); err != nil {
 		return err
 	}
 
 	b.logger.Info("Loading events")
-	b.conn.StartHeartbeat(time.Minute)
-	go b.handler.Listen(b.conn)
-	b.conn.RequestID()
+	b.client.StartHeartbeat(time.Minute)
+	go b.handler.Listen(b.client)
+	b.client.RequestID()
 
 	return nil
 }
