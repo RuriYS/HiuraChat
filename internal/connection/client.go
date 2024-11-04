@@ -40,10 +40,10 @@ func New(logger *logger.Logger, wsUrl string, cfg *config.WebSocketConfig) (*Cli
 	var middleware *ratelimit.RateLimitMiddleware
 
 	if cfg.RateLimit.Enabled {
-		rateLimiter = ratelimit.NewRateLimiter(ratelimit.Rate{
-			Limit:  cfg.RateLimit.GlobalRate,
-			Burst:  cfg.RateLimit.GlobalBurst,
-			Window: time.Second,
+		rateLimiter := ratelimit.NewRateLimiter(ratelimit.Rate{
+			Limit:  float64(cfg.RateLimit.Global.Messages),
+			Window: cfg.RateLimit.Global.Window,
+			Burst:  cfg.RateLimit.Global.Burst,
 		}, cfg.RateLimit.WaitForTokens)
 
 		for route, rate := range cfg.RateLimit.RouteLimits {

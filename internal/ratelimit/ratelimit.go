@@ -50,8 +50,9 @@ func newTokenBucket(rate Rate) *TokenBucket {
 }
 
 func (tb *TokenBucket) update(now time.Time) {
-	elapsed := now.Sub(tb.lastTime).Seconds()
-	tb.tokens += elapsed * tb.rate.Limit
+	elapsed := now.Sub(tb.lastTime)
+	tokensPerSecond := tb.rate.Limit / tb.rate.Window.Seconds()
+	tb.tokens += elapsed.Seconds() * tokensPerSecond
 	if tb.tokens > tb.maxTokens {
 		tb.tokens = tb.maxTokens
 	}
@@ -70,16 +71,16 @@ func (tb *TokenBucket) tryAcquire(wait bool) (time.Duration, bool) {
 		return 0, true
 	}
 
+	tokensPerSecond := tb.rate.Limit / tb.rate.Window.Seconds()
+	timeToNext := time.Duration((1.0 - tb.tokens) / tokensPerSecond * float64(time.Second))
+
 	if !wait {
-		timeToNext := time.Duration((1.0 - tb.tokens) / tb.rate.Limit * float64(time.Second))
 		return timeToNext, false
 	}
 
-	// Calculate wait time
-	waitTime := time.Duration((1.0 - tb.tokens) / tb.rate.Limit * float64(time.Second))
-	time.Sleep(waitTime)
+	time.Sleep(timeToNext)
 	tb.tokens = 0
-	return waitTime, true
+	return timeToNext, true
 }
 
 func (rl *RateLimiter) SetRouteLimit(route string, rate Rate) {

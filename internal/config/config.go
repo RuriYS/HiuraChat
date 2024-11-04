@@ -37,11 +37,16 @@ type WebSocketConfig struct {
 	MessageBufferSize    int
 	RateLimit            struct {
 		Enabled       bool
-		GlobalRate    float64
-		GlobalBurst   int
+		Global        GlobalRateLimit
 		WaitForTokens bool
 		RouteLimits   map[string]ratelimit.Rate
 	}
+}
+
+type GlobalRateLimit struct {
+	Messages int
+	Window   time.Duration
+	Burst    int
 }
 
 func LoadConfig(path string) (*Config, error) {
@@ -79,17 +84,22 @@ func (c *Config) GetWebSocketConfig() *WebSocketConfig {
 	}
 
 	cfg.RateLimit.Enabled = true
-	cfg.RateLimit.GlobalRate = 100
-	cfg.RateLimit.GlobalBurst = 5
+	cfg.RateLimit.Global = GlobalRateLimit{
+		Messages: 15,
+		Window:   30 * time.Second,
+		Burst:    3,
+	}
+
 	cfg.RateLimit.WaitForTokens = true
+
 	cfg.RateLimit.RouteLimits = map[string]ratelimit.Rate{
-		"sendMessage": {
-			Limit:  2,
-			Burst:  1,
-			Window: time.Second,
+		"default": {
+			Limit:  float64(cfg.RateLimit.Global.Messages),
+			Burst:  cfg.RateLimit.Global.Burst,
+			Window: cfg.RateLimit.Global.Window,
 		},
 		"getId": {
-			Limit:  0.2, // 1 request per 5 seconds
+			Limit:  1,
 			Burst:  1,
 			Window: 5 * time.Second,
 		},
