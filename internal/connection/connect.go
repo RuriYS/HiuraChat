@@ -12,7 +12,7 @@ func (c *Client) Connect() error {
 	dialer.HandshakeTimeout = c.config.HandshakeTimeout
 	dialer.EnableCompression = true
 
-	conn, _, err := dialer.Dial(c.config.WSUrl, nil)
+	conn, _, err := dialer.Dial(c.config.URL, nil)
 	if err != nil {
 		return fmt.Errorf("failed to establish connection: %w", err)
 	}

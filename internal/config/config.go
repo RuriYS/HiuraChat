@@ -1,8 +1,8 @@
-// internal/config/config.go
 package config
 
 import (
 	"fmt"
+	"hiurachat/internal/ratelimit"
 	"os"
 	"path/filepath"
 	"time"
@@ -11,19 +11,23 @@ import (
 )
 
 type Config struct {
-	Bot       BotConfig       `yaml:"bot"`
-	WebSocket WebSocketConfig `yaml:"websocket"`
-	Logger    LoggerConfig    `yaml:"logger"`
-}
+	Bot struct {
+		Prefix         string `yaml:"prefix"`
+		ResponsePrefix string `yaml:"response_prefix"`
+	} `yaml:"bot"`
 
-type BotConfig struct {
-	Prefix         string `yaml:"prefix"`
-	ResponsePrefix string `yaml:"response_prefix"`
+	WebSocket struct {
+		URL string `yaml:"url"`
+	} `yaml:"websocket"`
+
+	Logger struct {
+		Level     string `yaml:"level"`
+		UseColors bool   `yaml:"use_colors"`
+	} `yaml:"logger"`
 }
 
 type WebSocketConfig struct {
-	URL                  string `yaml:"url"`
-	WSUrl                string
+	URL                  string
 	MaxReconnectAttempts int
 	ReadTimeout          time.Duration
 	WriteTimeout         time.Duration
@@ -31,23 +35,13 @@ type WebSocketConfig struct {
 	PingTimeout          time.Duration
 	HandshakeTimeout     time.Duration
 	MessageBufferSize    int
-}
-
-func DefaultConfig() WebSocketConfig {
-	return WebSocketConfig{
-		MaxReconnectAttempts: 10,
-		ReadTimeout:          2 * time.Minute,
-		WriteTimeout:         10 * time.Second,
-		PingInterval:         30 * time.Second,
-		PingTimeout:          5 * time.Second,
-		HandshakeTimeout:     10 * time.Second,
-		MessageBufferSize:    100,
+	RateLimit            struct {
+		Enabled       bool
+		GlobalRate    float64
+		GlobalBurst   int
+		WaitForTokens bool
+		RouteLimits   map[string]ratelimit.Rate
 	}
-}
-
-type LoggerConfig struct {
-	Level     string `yaml:"level"`
-	UseColors bool   `yaml:"use_colors"`
 }
 
 func LoadConfig(path string) (*Config, error) {
@@ -70,4 +64,36 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	return &config, nil
+}
+
+func (c *Config) GetWebSocketConfig() *WebSocketConfig {
+	cfg := &WebSocketConfig{
+		URL:                  c.WebSocket.URL,
+		MaxReconnectAttempts: 10,
+		ReadTimeout:          2 * time.Minute,
+		WriteTimeout:         10 * time.Second,
+		PingInterval:         30 * time.Second,
+		PingTimeout:          5 * time.Second,
+		HandshakeTimeout:     10 * time.Second,
+		MessageBufferSize:    100,
+	}
+
+	cfg.RateLimit.Enabled = true
+	cfg.RateLimit.GlobalRate = 100
+	cfg.RateLimit.GlobalBurst = 5
+	cfg.RateLimit.WaitForTokens = true
+	cfg.RateLimit.RouteLimits = map[string]ratelimit.Rate{
+		"sendMessage": {
+			Limit:  2,
+			Burst:  1,
+			Window: time.Second,
+		},
+		"getId": {
+			Limit:  0.2, // 1 request per 5 seconds
+			Burst:  1,
+			Window: 5 * time.Second,
+		},
+	}
+
+	return cfg
 }

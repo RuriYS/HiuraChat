@@ -10,6 +10,7 @@ import (
 
 func main() {
 	cfg, err := config.LoadConfig("config.yml")
+
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}

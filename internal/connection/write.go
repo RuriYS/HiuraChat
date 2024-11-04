@@ -1,8 +1,11 @@
 package connection
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"hiurachat/internal/ratelimit"
+	"hiurachat/internal/types"
 	"time"
 )
 
@@ -16,13 +19,36 @@ func (c *Client) WriteJSON(v interface{}) error {
 		return fmt.Errorf("failed to marshal JSON: %w", err)
 	}
 
+	if c.middleware == nil {
+		return c.performWrite(v, payload)
+	}
+
+	var route string
+	if msg, ok := v.(types.Message); ok {
+		route = msg.Action
+	} else {
+		route = "default"
+	}
+
+	err = c.middleware.Handle(context.Background(), route, func() error {
+		return c.performWrite(v, payload)
+	})
+
+	if err != nil {
+		if rateLimitErr, ok := err.(*ratelimit.RateLimitError); ok {
+			c.logger.Debug("Rate limited on route %s, retry after %v", rateLimitErr.Route, rateLimitErr.RetryAfter)
+			time.Sleep(rateLimitErr.RetryAfter)
+			return c.WriteJSON(v)
+		}
+		return err
+	}
+
+	return nil
+}
+
+func (c *Client) performWrite(v interface{}, payload []byte) error {
 	c.writeMu.Lock()
 	defer c.writeMu.Unlock()
-
-	since := time.Since(c.lastWrite)
-	if since < time.Second {
-		time.Sleep(time.Second - since)
-	}
 
 	c.conn.SetWriteDeadline(time.Now().Add(c.config.WriteTimeout))
 	c.logger.Debug("Payload: %s", string(payload))

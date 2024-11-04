@@ -21,7 +21,7 @@ type Bot struct {
 func New(logger *logger.Logger, cfg *config.Config) (*Bot, error) {
 	logger.Info("Initializing...")
 
-	client, err := connection.New(logger, cfg.WebSocket.URL, nil)
+	client, err := connection.New(logger, cfg.WebSocket.URL, cfg.GetWebSocketConfig())
 	if err != nil {
 		return nil, err
 	}
