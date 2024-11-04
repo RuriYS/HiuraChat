@@ -54,9 +54,7 @@ func (h *MessageHandler) HandleCommand(commandStr string, args []string) (string
 func (h *MessageHandler) Listen(conn *connection.Client) {
 	h.conn = conn
 
-	// Define the message handler function
 	messageHandler := func(response types.Response) {
-		// Handle connection ID messages
 		if response.ConnectionId != "" {
 			if conn.GetBotID() == "" {
 				conn.SetBotID(response.ConnectionId)
@@ -76,12 +74,10 @@ func (h *MessageHandler) Listen(conn *connection.Client) {
 			return
 		}
 
-		// Skip empty messages or messages from self
 		if response.Message == "" || response.Sender == conn.GetBotID() {
 			return
 		}
 
-		// Process commands
 		parts := strings.Fields(response.Message)
 		if len(parts) > 0 {
 			command := parts[0]
@@ -95,12 +91,9 @@ func (h *MessageHandler) Listen(conn *connection.Client) {
 				}
 			}
 		}
-
-		// Log all messages
 		h.logger.Info("%s: %s", response.SenderName, response.Message)
 	}
 
-	// Start listening for messages
 	conn.Listen(messageHandler)
 }
 

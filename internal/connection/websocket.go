@@ -29,8 +29,6 @@ type Client struct {
 	messageChannel       chan types.Response
 }
 
-// New creates a new WebSocket client instance with the specified logger and WebSocket URL.
-// Returns an initialized client and any error that occurred during creation.
 func New(logger *logger.Logger, wsUrl string) (*Client, error) {
 	return &Client{
 		logger:               logger,
@@ -46,13 +44,8 @@ func New(logger *logger.Logger, wsUrl string) (*Client, error) {
 	}, nil
 }
 
-// Connect establishes a WebSocket connection to the server.
-// It sets up connection timeouts and initializes connection monitoring.
-// Returns an error if the connection attempt fails.
 func (c *Client) Connect() error {
 	url := c.wsUrl
-
-	// Configure connection timeout
 	dialer := websocket.DefaultDialer
 	dialer.HandshakeTimeout = 10 * time.Second
 	dialer.EnableCompression = true
@@ -62,20 +55,16 @@ func (c *Client) Connect() error {
 		return fmt.Errorf("failed to establish connection: %w", err)
 	}
 
-	// Set connection deadlines
 	conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 	conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 
 	c.conn = conn
 	c.isConnected = true
-
-	// Start connection monitor
 	go c.monitorConnection()
 
 	return nil
 }
 
-// monitorConnection continuously monitors the WebSocket connection for incoming messages and status
 func (c *Client) monitorConnection() {
 	c.conn.SetPingHandler(func(appData string) error {
 		c.logger.Debug("Received ping")
@@ -113,12 +102,10 @@ func (c *Client) monitorConnection() {
 				return
 			}
 
-			// Log all received messages for debugging
 			if data, err := json.Marshal(response); err == nil {
 				c.logger.Debug("Received message: %s", string(data))
 			}
 
-			// Send the message to the channel for processing
 			select {
 			case c.messageChannel <- response:
 			default:
@@ -139,8 +126,6 @@ func (c *Client) Listen(handler func(types.Response)) {
 	}
 }
 
-// handleDisconnect manages the disconnection process and initiates reconnection if appropriate.
-// It ensures thread-safe state updates and prevents multiple simultaneous reconnection attempts.
 func (c *Client) handleDisconnect() {
 	c.writeMu.Lock()
 	wasConnected := c.isConnected
@@ -152,8 +137,6 @@ func (c *Client) handleDisconnect() {
 	}
 }
 
-// reconnectWithBackoff implements an exponential backoff strategy for reconnection attempts.
-// It will try to reconnect multiple times with increasing delays between attempts.
 func (c *Client) reconnectWithBackoff() {
 	c.reconnecting = true
 	defer func() { c.reconnecting = false }()
@@ -193,8 +176,6 @@ func (c *Client) reconnectWithBackoff() {
 	}
 }
 
-// StartHeartbeat initiates a heartbeat goroutine that sends periodic ping messages
-// to keep the connection alive. The interval parameter determines the frequency of heartbeats.
 func (c *Client) StartHeartbeat(interval time.Duration) {
 	if interval < c.pingInterval {
 		interval = c.pingInterval
@@ -216,7 +197,6 @@ func (c *Client) StartHeartbeat(interval time.Duration) {
 					c.handleDisconnect()
 				} else {
 					c.logger.Debug("Heartbeat sent")
-					// Reset read deadline after successful heartbeat
 					c.conn.SetReadDeadline(time.Now().Add(c.readTimeout))
 				}
 
@@ -228,8 +208,6 @@ func (c *Client) StartHeartbeat(interval time.Duration) {
 	}()
 }
 
-// WriteControl sends a WebSocket control message with the specified parameters.
-// It ensures thread-safe access to the connection for control message writing.
 func (c *Client) WriteControl(messageType int, data []byte, deadline time.Time) error {
 	c.writeMu.Lock()
 	defer c.writeMu.Unlock()
@@ -237,8 +215,6 @@ func (c *Client) WriteControl(messageType int, data []byte, deadline time.Time) 
 	return c.conn.WriteControl(messageType, data, deadline)
 }
 
-// reconnect attempts to reestablish the WebSocket connection after a disconnection.
-// It closes the existing connection if necessary and attempts to create a new one.
 func (c *Client) reconnect() error {
 	if c.conn != nil {
 		c.conn.Close()
@@ -252,8 +228,6 @@ func (c *Client) reconnect() error {
 	return c.RequestID()
 }
 
-// Close gracefully shuts down the WebSocket connection and stops all goroutines.
-// It sends a close frame to the server and cleans up resources.
 func (c *Client) Close() error {
 	close(c.done)
 	if c.conn != nil {
@@ -269,8 +243,6 @@ func (c *Client) Close() error {
 	return nil
 }
 
-// RequestID sends a request to the server to get the bot's ID.
-// This is typically used during the initial connection or reconnection.
 func (c *Client) RequestID() error {
 	msg := types.Message{
 		Action: "getId",
@@ -278,8 +250,6 @@ func (c *Client) RequestID() error {
 	return c.WriteJSON(msg)
 }
 
-// WriteJSON sends a JSON message to the server with rate limiting and error handling.
-// It ensures thread-safe access to the connection and implements backoff between writes.
 func (c *Client) WriteJSON(v interface{}) error {
 	if !c.isConnected {
 		return fmt.Errorf("not connected")
@@ -293,7 +263,6 @@ func (c *Client) WriteJSON(v interface{}) error {
 	c.writeMu.Lock()
 	defer c.writeMu.Unlock()
 
-	// Rate limiting
 	since := time.Since(c.lastWrite)
 	if since < time.Second {
 		time.Sleep(time.Second - since)
@@ -312,8 +281,6 @@ func (c *Client) WriteJSON(v interface{}) error {
 	return nil
 }
 
-// min returns the minimum of two integers.
-// Used for calculating backoff delays.
 func min(a, b int) int {
 	if a < b {
 		return a
@@ -321,8 +288,6 @@ func min(a, b int) int {
 	return b
 }
 
-// ReadJSON reads and decodes a JSON message from the WebSocket connection.
-// Returns an error if the connection is nil or if reading/decoding fails.
 func (c *Client) ReadJSON(v interface{}) error {
 	if c.conn == nil {
 		return fmt.Errorf("connection is nil")
@@ -330,12 +295,10 @@ func (c *Client) ReadJSON(v interface{}) error {
 	return c.conn.ReadJSON(v)
 }
 
-// GetBotID returns the current bot ID.
 func (c *Client) GetBotID() string {
 	return c.botID
 }
 
-// SetBotID sets the bot ID to the specified value.
 func (c *Client) SetBotID(id string) {
 	c.botID = id
 }
